@@ -13,11 +13,10 @@ export const useVoiceRecognition = () => {
 
   const { state, speechStartOffsetMs, updateAudioState } = useAudioStore();
 
-  console.log('useVoiceRecognition: state', AudioState[state]);
-
   const start = async () => {
     try {
       if (recorder.isRecording) return;
+
       await switchAudioRecording({ enable: true });
       await recorder.prepareToRecordAsync();
 
@@ -32,6 +31,7 @@ export const useVoiceRecognition = () => {
 
     recorder.pause();
     await recorder.stop();
+
     if (publishUri && recorder.uri) {
       updateAudioState({ recordedUri: recorder.uri });
     }
