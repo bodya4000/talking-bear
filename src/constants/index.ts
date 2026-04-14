@@ -11,5 +11,5 @@ export const APP_CONFIG = {
   VOLUME: 1,
 
   BACKGROUND_COLOR: '#d6e1ea',
-  STATE_MACHINE_NAME: 'State Machine 1',
+  STATE_MACHINE_NAME: 'State Machine 1'
 } as const;

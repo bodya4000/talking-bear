@@ -19,7 +19,7 @@ export const useAudioSpeaker = () => {
     updateAudioState({
       recordedUri: null,
       speechStartOffsetMs: null,
-      state: AudioState.Monitoring,
+      state: AudioState.Monitoring
     });
   }, [updateAudioState]);
 
@@ -34,6 +34,7 @@ export const useAudioSpeaker = () => {
         player.setPlaybackRate(APP_CONFIG.PITCH_RATE, 'high');
 
         const seekTime = Math.max(0, (speechStartOffsetMs ?? 0) / 1000 - 1);
+
         player.seekTo(seekTime);
 
         updateAudioState({ state: AudioState.Playing });

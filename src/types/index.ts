@@ -4,5 +4,5 @@ export enum AudioState {
   AskPermissions, // 0
   Monitoring, // 1
   Recording, // 2
-  Playing, // 3
+  Playing // 3
 }

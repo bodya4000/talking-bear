@@ -20,6 +20,7 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
 
   getRiveCharacterState: () => {
     const state = get().state;
+
     switch (state) {
       case AudioState.Playing:
         return 'Talk';
@@ -28,5 +29,5 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
       default:
         return 'Check';
     }
-  },
+  }
 }));

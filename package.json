@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
+    "lint": "biome check . --write",
     "start": "expo start",
     "prebuild": "expo prebuild",
     "android": "expo run:android",
@@ -29,8 +30,12 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.11",
     "@types/react": "~19.1.0",
-    "typescript": "~5.9.2"
+    "eslint": "^9",
+    "eslint-config-prettier": "^10.1.8",
+    "typescript": "~5.9.2",
+    "typescript-eslint": "^8.58.2"
   },
   "private": true
 }

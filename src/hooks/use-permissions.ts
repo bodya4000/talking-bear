@@ -13,43 +13,54 @@ export const useAudioPermissions = () => {
   const showMicSettingsAlert = () => {
     Alert.alert('Microphone access needed', 'Turn on the microphone for this app in Settings to continue.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Open Settings', onPress: Linking.openSettings },
+      { text: 'Open Settings', onPress: Linking.openSettings }
     ]);
   };
 
   useEffect(() => {
     const evaluate = async () => {
       if (evaluateInFlightRef.current) return;
+
       evaluateInFlightRef.current = true;
+
       try {
         const initial = await getRecordingPermissionsAsync();
 
         if (initial.granted) {
           blockedSettingsAlertShownRef.current = false;
           updateAudioState({ state: AudioState.Monitoring });
+
           return;
         }
 
         if (initial.canAskAgain) {
           const requested = await requestRecordingPermissionsAsync();
+
           if (requested.granted) {
             blockedSettingsAlertShownRef.current = false;
             updateAudioState({ state: AudioState.Monitoring });
+
             return;
           }
+
           if (!requested.canAskAgain) {
             updateAudioState({ state: AudioState.AskPermissions });
+
             if (!blockedSettingsAlertShownRef.current) {
               blockedSettingsAlertShownRef.current = true;
               showMicSettingsAlert();
             }
+
             return;
           }
+
           updateAudioState({ state: AudioState.AskPermissions });
+
           return;
         }
 
         updateAudioState({ state: AudioState.AskPermissions });
+
         if (!blockedSettingsAlertShownRef.current) {
           blockedSettingsAlertShownRef.current = true;
           showMicSettingsAlert();
@@ -65,6 +76,7 @@ export const useAudioPermissions = () => {
       if (next === 'active') {
         evaluate();
       }
+
       if (next === 'background') {
         blockedSettingsAlertShownRef.current = false;
       }

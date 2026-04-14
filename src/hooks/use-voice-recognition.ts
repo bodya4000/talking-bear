@@ -45,6 +45,7 @@ export const useVoiceRecognition = () => {
 
   useEffect(() => {
     if (!recorderState.isRecording || !recorderState.metering) return;
+
     if (state === AudioState.Playing) return;
 
     const currentDb = recorderState.metering;
