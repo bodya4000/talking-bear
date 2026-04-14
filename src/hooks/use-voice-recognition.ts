@@ -1,5 +1,5 @@
 import { RecordingPresets, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 
 import { APP_CONFIG } from '../constants';
@@ -12,6 +12,8 @@ export const useVoiceRecognition = () => {
   const recorderState = useAudioRecorderState(recorder, APP_CONFIG.METERING_POLL_INTERVAL);
 
   const { state, speechStartOffsetMs, updateAudioState } = useAudioStore();
+
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const start = async () => {
     try {
@@ -44,20 +46,31 @@ export const useVoiceRecognition = () => {
   }, [state]);
 
   useEffect(() => {
-    if (!recorderState.isRecording || !recorderState.metering) return;
+    if (!recorderState.isRecording || state === AudioState.Playing) return;
 
-    if (state === AudioState.Playing) return;
+    if (!recorderState.metering || !recorderState.isRecording) return;
 
     const currentDb = recorderState.metering;
     const isLoudEnough = currentDb > APP_CONFIG.LOUDNESS_THRESHOLD_DECIBELS;
 
     if (isLoudEnough) {
-      speechStartOffsetMs === null
-        ? updateAudioState({ state: AudioState.Recording, speechStartOffsetMs: recorderState.durationMillis })
-        : updateAudioState({ state: AudioState.Recording });
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+
+      if (state !== AudioState.Recording) {
+        updateAudioState({
+          state: AudioState.Recording,
+          speechStartOffsetMs: speechStartOffsetMs === null ? recorderState.durationMillis : speechStartOffsetMs
+        });
+      }
     } else {
-      if (state === AudioState.Recording) {
-        stop();
+      if (state === AudioState.Recording && !silenceTimerRef.current) {
+        silenceTimerRef.current = setTimeout(() => {
+          stop();
+          silenceTimerRef.current = null;
+        }, APP_CONFIG.SILENCE_DURATION_MS);
       }
     }
   }, [recorderState.metering, recorderState.isRecording, state]);
