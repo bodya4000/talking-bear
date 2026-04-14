@@ -4,7 +4,7 @@ Expo (React Native) app with a voice-driven flow: listen for speech above a loud
 
 ## Domain logic: State pattern
 
-The audio behavior is modeled as explicit **phases** (`AudioPhase` in `src/audio/use-audio-store.ts`). The store holds the current phase plus data the phases need (`recordedUri`, `speechStartOffsetMs`). Hooks (`useAudioPermissions`, `useVoiceRecognition`, `useAudioSpeaker`) react to phase and update it—this is a **state-machine / State-style** design: behavior is chosen by the current phase, not scattered flags.
+The audio behavior is modeled as explicit **phases** (`AudioState` in `src/audio/use-audio-store.ts`). The store holds the current state plus data the phases need (`recordedUri`, `speechStartOffsetMs`). Hooks (`useAudioPermissions`, `useVoiceRecognition`, `useAudioSpeaker`) react to state and update it—this is a **state-machine / State-style** design: behavior is chosen by the current state, not scattered flags.
 
 Phases:
 
@@ -20,8 +20,8 @@ Phases:
 ### 1. Permissions (`AskPermissions`)
 
 - **When it runs:** On app load, whenever the app becomes **active** again (e.g. returning from iOS Settings), and the hook resets an internal “settings alert” guard when the app goes to **background** so the next foreground can prompt again if needed.
-- **Default:** Initial phase is **`AskPermissions`** until the OS reports microphone access granted, then the phase moves to **`Monitoring`**.
-- **While `AskPermissions`:** The voice pipeline does not start recording (`useVoiceRecognition` only arms recording when phase is **`Monitoring`**), so **no capture or playback** from the main audio flow until permission is resolved.
+- **Default:** Initial state is **`AskPermissions`** until the OS reports microphone access granted, then the state moves to **`Monitoring`**.
+- **While `AskPermissions`:** The voice pipeline does not start recording (`useVoiceRecognition` only arms recording when state is **`Monitoring`**), so **no capture or playback** from the main audio flow until permission is resolved.
 
 ---
 
@@ -37,14 +37,14 @@ Phases:
 
 - **Behavior:** Continue reading metering while recording.
 - **While loud enough:** Remain in **`Recording`** (and keep the speech-start offset meaningful for the current segment).
-- **When level drops below the threshold:** **Stop** the recorder, publish **`recordedUri`** to the store, and leave phase as **`Recording`** until the speaker hook picks up the file (the next step is driven by `recordedUri` + phase, not a separate “Saving” phase in the store).
+- **When level drops below the threshold:** **Stop** the recorder, publish **`recordedUri`** to the store, and leave state as **`Recording`** until the speaker hook picks up the file (the next step is driven by `recordedUri` + state, not a separate “Saving” state in the store).
 
 ---
 
 ### 4. Playing
 
-- **Entering:** When there is a **`recordedUri`** and phase is not already **`Playing`**, the speaker hook turns **off** microphone recording for playback (`switchAudioRecording({ enable: false })`), sets phase to **`Playing`**, loads the file, optionally **seeks** using **`speechStartOffsetMs`**, and plays.
-- **Exiting:** **Only after playback finishes** (`didJustFinish`), the store is reset for that cycle (**`recordedUri`** cleared, phase set back to **`Monitoring`**). Then monitoring-style recording can run again.
+- **Entering:** When there is a **`recordedUri`** and state is not already **`Playing`**, the speaker hook turns **off** microphone recording for playback (`switchAudioRecording({ enable: false })`), sets state to **`Playing`**, loads the file, optionally **seeks** using **`speechStartOffsetMs`**, and plays.
+- **Exiting:** **Only after playback finishes** (`didJustFinish`), the store is reset for that cycle (**`recordedUri`** cleared, state set back to **`Monitoring`**). Then monitoring-style recording can run again.
 
 ---
 

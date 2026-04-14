@@ -2,18 +2,19 @@ import { RecordingPresets, useAudioRecorder, useAudioRecorderState } from 'expo-
 import { useEffect } from 'react';
 import { Alert } from 'react-native';
 
-import { AUDIO_CONFIG } from '../constants';
-import { AudioPhase, useAudioStore } from './use-audio-store';
-import { switchAudioRecording } from './utils';
+import { APP_CONFIG } from '../constants';
+import { useAudioStore } from '../store/use-audio-store';
+import { AudioState } from '../types';
+import { switchAudioRecording } from '../utils';
 
 export const useVoiceRecognition = () => {
   const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
-  const recorderState = useAudioRecorderState(recorder, AUDIO_CONFIG.METERING_POLL_INTERVAL);
+  const recorderState = useAudioRecorderState(recorder, APP_CONFIG.METERING_POLL_INTERVAL);
 
-  const { phase, speechStartOffsetMs, updateAudioState } = useAudioStore();
+  const { state, speechStartOffsetMs, updateAudioState } = useAudioStore();
 
+  console.log('useVoiceRecognition: state', AudioState[state]);
 
-  console.log('useVoiceRecognition: phase', AudioPhase[phase]);
   const start = async () => {
     try {
       if (recorder.isRecording) return;
@@ -37,31 +38,28 @@ export const useVoiceRecognition = () => {
   };
 
   useEffect(() => {
-    if (phase === AudioPhase.Monitoring) {
+    if (state === AudioState.Monitoring) {
       start();
     }
-  }, [phase]);
+  }, [state]);
 
   useEffect(() => {
     if (!recorderState.isRecording || !recorderState.metering) return;
-    if (phase === AudioPhase.Playing) return;
-
-    console.log('useVoiceRecognition: did reset', recorderState.mediaServicesDidReset);
-    console.log('useVoiceRecognition: ms', recorderState.durationMillis);
+    if (state === AudioState.Playing) return;
 
     const currentDb = recorderState.metering;
-    const isLoudEnough = currentDb > AUDIO_CONFIG.LOUDNESS_THRESHOLD_DECIBELS;
+    const isLoudEnough = currentDb > APP_CONFIG.LOUDNESS_THRESHOLD_DECIBELS;
 
     if (isLoudEnough) {
       speechStartOffsetMs === null
-        ? updateAudioState({ phase: AudioPhase.Recording, speechStartOffsetMs: recorderState.durationMillis })
-        : updateAudioState({ phase: AudioPhase.Recording });
+        ? updateAudioState({ state: AudioState.Recording, speechStartOffsetMs: recorderState.durationMillis })
+        : updateAudioState({ state: AudioState.Recording });
     } else {
-      if (phase === AudioPhase.Recording) {
+      if (state === AudioState.Recording) {
         stop();
       }
     }
-  }, [recorderState.metering, recorderState.isRecording, phase]);
+  }, [recorderState.metering, recorderState.isRecording, state]);
 
   return { uri: recorder.uri };
 };

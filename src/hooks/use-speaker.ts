@@ -2,9 +2,10 @@ import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useCallback, useEffect } from 'react';
 import { Alert } from 'react-native';
 
-import { AUDIO_CONFIG } from '../constants';
-import { AudioPhase, useAudioStore } from './use-audio-store';
-import { switchAudioRecording } from './utils';
+import { APP_CONFIG } from '../constants';
+import { useAudioStore } from '../store/use-audio-store';
+import { AudioState } from '../types';
+import { delay, switchAudioRecording } from '../utils';
 
 export const useAudioSpeaker = () => {
   const { recordedUri, speechStartOffsetMs, updateAudioState } = useAudioStore();
@@ -12,11 +13,13 @@ export const useAudioSpeaker = () => {
   const status = useAudioPlayerStatus(player);
 
   const resetToMonitoring = useCallback(async () => {
-    switchAudioRecording({ enable: true });
+    await switchAudioRecording({ enable: true });
+    await delay();
+
     updateAudioState({
       recordedUri: null,
       speechStartOffsetMs: null,
-      phase: AudioPhase.Monitoring,
+      state: AudioState.Monitoring,
     });
   }, [updateAudioState]);
 
@@ -28,13 +31,14 @@ export const useAudioSpeaker = () => {
         await switchAudioRecording({ enable: false });
 
         player.replace({ uri: recordedUri });
-        player.setPlaybackRate(AUDIO_CONFIG.PITCH_RATE, 'high');
+        player.setPlaybackRate(APP_CONFIG.PITCH_RATE, 'high');
 
         const seekTime = Math.max(0, (speechStartOffsetMs ?? 0) / 1000 - 1);
         player.seekTo(seekTime);
 
-        updateAudioState({ phase: AudioPhase.Playing });
+        updateAudioState({ state: AudioState.Playing });
 
+        await delay();
         player.play();
       } catch (error) {
         await resetToMonitoring();
@@ -44,10 +48,6 @@ export const useAudioSpeaker = () => {
 
     playVoice();
   }, [recordedUri]);
-
-
-  console.log('useAudioSpeaker: status', status.didJustFinish);
-
 
   useEffect(() => {
     if (status.didJustFinish) {

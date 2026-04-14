@@ -2,7 +2,8 @@ import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from '
 import { useEffect, useRef } from 'react';
 import { Alert, AppState, Linking } from 'react-native';
 
-import { AudioPhase, useAudioStore } from './use-audio-store';
+import { useAudioStore } from '../store/use-audio-store';
+import { AudioState } from '../types';
 
 export const useAudioPermissions = () => {
   const { updateAudioState } = useAudioStore();
@@ -25,8 +26,7 @@ export const useAudioPermissions = () => {
 
         if (initial.granted) {
           blockedSettingsAlertShownRef.current = false;
-          console.log('useAudioPermissions: doint phase change');
-          updateAudioState({ phase: AudioPhase.Monitoring });
+          updateAudioState({ state: AudioState.Monitoring });
           return;
         }
 
@@ -34,23 +34,22 @@ export const useAudioPermissions = () => {
           const requested = await requestRecordingPermissionsAsync();
           if (requested.granted) {
             blockedSettingsAlertShownRef.current = false;
-            console.log('useAudioPermissions: doint phase change');
-            updateAudioState({ phase: AudioPhase.Monitoring });
+            updateAudioState({ state: AudioState.Monitoring });
             return;
           }
           if (!requested.canAskAgain) {
-            updateAudioState({ phase: AudioPhase.AskPermissions });
+            updateAudioState({ state: AudioState.AskPermissions });
             if (!blockedSettingsAlertShownRef.current) {
               blockedSettingsAlertShownRef.current = true;
               showMicSettingsAlert();
             }
             return;
           }
-          updateAudioState({ phase: AudioPhase.AskPermissions });
+          updateAudioState({ state: AudioState.AskPermissions });
           return;
         }
 
-        updateAudioState({ phase: AudioPhase.AskPermissions });
+        updateAudioState({ state: AudioState.AskPermissions });
         if (!blockedSettingsAlertShownRef.current) {
           blockedSettingsAlertShownRef.current = true;
           showMicSettingsAlert();

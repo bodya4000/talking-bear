@@ -1,36 +1,30 @@
 import { create } from 'zustand';
 
-export enum AudioPhase {
-  AskPermissions, // 0
-  Monitoring, // 1
-  Recording, // 2
-  Playing, // 3
-}
+import { AudioState, type RiveCharacterState } from '../types';
 
 interface AudioStore {
-  phase: AudioPhase;
+  state: AudioState;
   recordedUri: string | null;
   speechStartOffsetMs: number | null;
 
   updateAudioState: (state: Partial<AudioStore>) => void;
-  getBearStatus: () => 'Check' | 'Hear' | 'Talk';
-
+  getRiveCharacterState: () => RiveCharacterState;
 }
 
 export const useAudioStore = create<AudioStore>((set, get) => ({
-  phase: AudioPhase.AskPermissions,
+  state: AudioState.AskPermissions,
   recordedUri: null,
   speechStartOffsetMs: null,
 
   updateAudioState: (newState) => set((state) => ({ ...state, ...newState })),
 
-  getBearStatus: () => {
-    const phase = get().phase;
-    switch (phase) {
-      case AudioPhase.Recording:
-        return 'Hear';
-      case AudioPhase.Playing:
+  getRiveCharacterState: () => {
+    const state = get().state;
+    switch (state) {
+      case AudioState.Playing:
         return 'Talk';
+      case AudioState.Recording:
+        return 'Hear';
       default:
         return 'Check';
     }
