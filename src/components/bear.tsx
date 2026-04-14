@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Rive, { Alignment, useRive } from 'rive-react-native';
 
-import { delay } from '../audio/utils';
-
 const STATE_MACHINE_NAME = 'State Machine 1';
 export type BearStatus = 'Talk' | 'Hear' | 'Check';
 
@@ -19,12 +17,10 @@ export default function Bear({ status }: BearProps) {
     if (!riveRef || lastStatus.current === status) return;
 
     const updateRive = async () => {
-      if (status === 'Talk') await delay(50); 
-
       riveRef.setInputState(STATE_MACHINE_NAME, 'Talk', status === 'Talk');
       riveRef.setInputState(STATE_MACHINE_NAME, 'Hear', status === 'Hear');
       riveRef.setInputState(STATE_MACHINE_NAME, 'Check', status === 'Check');
-      
+
       lastStatus.current = status;
     };
 

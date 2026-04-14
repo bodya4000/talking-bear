@@ -1,5 +1,7 @@
+import { Platform } from 'react-native';
+
 export const AUDIO_CONFIG = {
-  LOUDNESS_THRESHOLD_DECIBELS: -38,
+  LOUDNESS_THRESHOLD_DECIBELS: Platform.OS === 'ios' ? -38 : -13,
   MINIMUM_SILENCE_DURATION_MS: 300,
 
   METERING_POLL_INTERVAL: 500,

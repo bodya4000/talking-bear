@@ -1,9 +1,10 @@
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useEffect } from 'react';
+import { Alert } from 'react-native';
 
 import { AUDIO_CONFIG } from '../constants';
 import { AudioPhase, useAudioStore } from './use-audio-store';
-import { delay, switchAudioRecording } from './utils';
+import { switchAudioRecording } from './utils';
 
 export const useAudioSpeaker = () => {
   const { recordedUri, speechStartOffsetMs, phase, updateAudioState } = useAudioStore();
@@ -16,7 +17,6 @@ export const useAudioSpeaker = () => {
     const playVoice = async () => {
       try {
         await switchAudioRecording({ enable: false });
-        await delay(200);
 
         updateAudioState({ phase: AudioPhase.Playing });
 
@@ -27,8 +27,7 @@ export const useAudioSpeaker = () => {
         player.setPlaybackRate(AUDIO_CONFIG.PITCH_RATE, 'medium');
         player.play();
       } catch (error) {
-        console.error('Playback error:', error);
-        updateAudioState({ phase: AudioPhase.Monitoring });
+        Alert.alert('Failed to play audio');
       }
     };
 
@@ -36,15 +35,10 @@ export const useAudioSpeaker = () => {
   }, [recordedUri, phase]);
 
   useEffect(() => {
-    const resetToMonitoring = async () => {
-      await delay(200);
-      updateAudioState({ recordedUri: null, phase: AudioPhase.Monitoring });
-    };
-
     if (status.didJustFinish) {
-      resetToMonitoring();
+      updateAudioState({ recordedUri: null, phase: AudioPhase.Monitoring });
     }
-  }, [phase, status.didJustFinish]);
+  }, [status.didJustFinish]);
 
   return { isPlaying: status.playing };
 };

@@ -10,29 +10,18 @@ export enum AudioPhase {
 
 interface AudioStore {
   phase: AudioPhase;
-  setPhase: (phase: AudioPhase) => void;
-
-  getBearStatus: () => 'Check' | 'Hear' | 'Talk';
-
   recordedUri: string | null;
-  setRecordedUri: (uri: string | null) => void;
-
   speechStartOffsetMs: number | null;
-  setSpeechStartOffsetMs: (ms: number | null) => void;
 
   updateAudioState: (state: Partial<AudioStore>) => void;
+  getBearStatus: () => 'Check' | 'Hear' | 'Talk';
+
 }
 
 export const useAudioStore = create<AudioStore>((set, get) => ({
   phase: AudioPhase.AskPermissions,
-
-  setPhase: (phase) => set({ phase }),
-
-  setRecordedUri: (recordedUri) => set({ recordedUri }),
   recordedUri: null,
-
   speechStartOffsetMs: null,
-  setSpeechStartOffsetMs: (speechStartOffsetMs) => set({ speechStartOffsetMs }),
 
   updateAudioState: (newState) => set((state) => ({ ...state, ...newState })),
 

@@ -5,18 +5,14 @@ import { Alert, AppState, Linking } from 'react-native';
 import { AudioPhase, useAudioStore } from './use-audio-store';
 
 const showMicSettingsAlert = () => {
-  Alert.alert(
-    'Microphone access needed',
-    'Turn on the microphone for this app in Settings to continue.',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Open Settings', onPress: Linking.openSettings },
-    ],
-  );
+  Alert.alert('Microphone access needed', 'Turn on the microphone for this app in Settings to continue.', [
+    { text: 'Cancel', style: 'cancel' },
+    { text: 'Open Settings', onPress: Linking.openSettings },
+  ]);
 };
 
 export const useAudioPermissions = () => {
-  const { setPhase } = useAudioStore();
+  const { updateAudioState } = useAudioStore();
   const blockedSettingsAlertShownRef = useRef(false);
   const evaluateInFlightRef = useRef(false);
 
@@ -29,7 +25,8 @@ export const useAudioPermissions = () => {
 
         if (initial.granted) {
           blockedSettingsAlertShownRef.current = false;
-          setPhase(AudioPhase.Monitoring);
+          console.log('useAudioPermissions: doint phase change');
+          updateAudioState({ phase: AudioPhase.Monitoring });
           return;
         }
 
@@ -37,22 +34,23 @@ export const useAudioPermissions = () => {
           const requested = await requestRecordingPermissionsAsync();
           if (requested.granted) {
             blockedSettingsAlertShownRef.current = false;
-            setPhase(AudioPhase.Monitoring);
+            console.log('useAudioPermissions: doint phase change');
+            updateAudioState({ phase: AudioPhase.Monitoring });
             return;
           }
           if (!requested.canAskAgain) {
-            setPhase(AudioPhase.AskPermissions);
+            updateAudioState({ phase: AudioPhase.AskPermissions });
             if (!blockedSettingsAlertShownRef.current) {
               blockedSettingsAlertShownRef.current = true;
               showMicSettingsAlert();
             }
             return;
           }
-          setPhase(AudioPhase.AskPermissions);
+          updateAudioState({ phase: AudioPhase.AskPermissions });
           return;
         }
 
-        setPhase(AudioPhase.AskPermissions);
+        updateAudioState({ phase: AudioPhase.AskPermissions });
         if (!blockedSettingsAlertShownRef.current) {
           blockedSettingsAlertShownRef.current = true;
           showMicSettingsAlert();
