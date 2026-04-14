@@ -1,77 +1,61 @@
-import {
-  RecordingPresets,
-  useAudioRecorder,
-  useAudioRecorderState,
-} from "expo-audio";
-import { useEffect, useRef } from "react";
-import { AUDIO_CONFIG } from "./constants";
-import { AudioPhase, useAudioStore } from "./use-audio-store";
+import { RecordingPresets, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
+import { useEffect, useRef } from 'react';
+
+import { AUDIO_CONFIG } from '../constants';
+import { AudioPhase, useAudioStore } from './use-audio-store';
+import { delay, switchAudioRecording } from './utils';
 
 export const useVoiceRecognition = () => {
-  const recorder = useAudioRecorder({
-    ...RecordingPresets.HIGH_QUALITY,
-    isMeteringEnabled: true,
-  });
-  const recorderState = useAudioRecorderState(
-    recorder,
-    AUDIO_CONFIG.METERING_POLL_INTERVAL
-  );
+  const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
+  const recorderState = useAudioRecorderState(recorder, AUDIO_CONFIG.METERING_POLL_INTERVAL);
 
-  const { phase, setPhase, setRecordedUri, setSpeechStartOffsetMs } =
-    useAudioStore();
+  const { phase, setPhase, updateAudioState } = useAudioStore();
   const silenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const monitorRotateRef = useRef(false);
 
   const start = async () => {
-    if (recorder.isRecording) return;
+    try {
+      if (recorder.isRecording) return;
+      await switchAudioRecording({ enable: true });
+      await recorder.prepareToRecordAsync();
 
-    await recorder.prepareToRecordAsync();
+      if (!recorder.isRecording) recorder.record();
+    } catch (e) {
+      console.error('Failed to start recording:', e);
 
-    recorder.record();
+      setPhase(AudioPhase.Monitoring);
+    }
   };
 
   const stop = async (publishUri = true) => {
+    if (!recorder.isRecording) return;
+
+    await recorder.pause();
     await recorder.stop();
-    if (publishUri && recorder.uri) setRecordedUri(recorder.uri);
+    await delay(200);
+    if (publishUri && recorder.uri) {
+      updateAudioState({ recordedUri: recorder.uri, phase: AudioPhase.Saving });
+    }
   };
 
   useEffect(() => {
-    if (
-      phase === AudioPhase.AskPermissions ||
-      phase === AudioPhase.Playing
-    ) {
-      return;
+    const runStart = async () => {
+      await delay(300);
+      start();
+    };
+
+    if (phase === AudioPhase.Monitoring) {
+      runStart();
     }
-    void start();
   }, [phase]);
 
   useEffect(() => {
-    if (phase !== AudioPhase.Monitoring) return;
     if (!recorderState.isRecording) return;
-    if (
-      recorderState.durationMillis < AUDIO_CONFIG.MAX_RECORDING_DURATION_MS
-    ) {
-      monitorRotateRef.current = false;
-      return;
-    }
-    if (monitorRotateRef.current) return;
-    monitorRotateRef.current = true;
-    void (async () => {
-      try {
-        await stop(false);
-        await start();
-      } finally {
-        monitorRotateRef.current = false;
-      }
-    })();
-  }, [phase, recorderState.durationMillis, recorderState.isRecording]);
+    if (!recorderState.metering) return;
+    if (phase === AudioPhase.Playing) return;
+    if (phase === AudioPhase.Saving) return;
 
-  useEffect(() => {
-    if (!recorderState.isRecording) return;
-
-    const currentDb = recorderState.metering ?? -160;
-    const isLoudEnough =
-      currentDb > AUDIO_CONFIG.LOUDNESS_THRESHOLD_DECIBELS;
+    const currentDb = recorderState.metering;
+    const isLoudEnough = currentDb > AUDIO_CONFIG.LOUDNESS_THRESHOLD_DECIBELS;
 
     if (isLoudEnough) {
       if (silenceTimeoutRef.current) {
@@ -80,8 +64,7 @@ export const useVoiceRecognition = () => {
       }
 
       if (phase !== AudioPhase.Recording) {
-        setSpeechStartOffsetMs(recorderState.durationMillis);
-        setPhase(AudioPhase.Recording);
+        updateAudioState({ speechStartOffsetMs: recorderState.durationMillis, phase: AudioPhase.Recording });
       }
     } else {
       if (phase === AudioPhase.Recording && !silenceTimeoutRef.current) {

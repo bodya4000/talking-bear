@@ -13,9 +13,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.anonymous.TalkingBear",
-    // ОБОВ'ЯЗКОВО для iOS:
     infoPlist: {
-      NSMicrophoneUsageDescription: "Ведмедик має чути тебе, щоб повторювати твої слова."
+      NSMicrophoneUsageDescription: "Bear can hear you, to repeat your words."
     }
   },
   android: {
@@ -51,11 +50,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           }
         }
       ],
-      // Налаштування для аудіо
       [
         "expo-audio",
         {
-          "microphonePermission": "Ведмедик має чути тебе, щоб повторювати твої слова."
+          "microphonePermission": "Bear can hear you, to repeat your words."
         }
       ],
       "expo-asset"

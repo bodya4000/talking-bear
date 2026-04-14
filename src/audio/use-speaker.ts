@@ -1,50 +1,50 @@
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useEffect } from 'react';
-import { AUDIO_CONFIG } from './constants';
+
+import { AUDIO_CONFIG } from '../constants';
 import { AudioPhase, useAudioStore } from './use-audio-store';
+import { delay, switchAudioRecording } from './utils';
 
 export const useAudioSpeaker = () => {
-  const { recordedUri, setRecordedUri, setPhase, setSpeechStartOffsetMs } =
-    useAudioStore();
-  
+  const { recordedUri, speechStartOffsetMs, phase, updateAudioState } = useAudioStore();
   const player = useAudioPlayer(null);
   const status = useAudioPlayerStatus(player);
 
   useEffect(() => {
-    if (!recordedUri) return;
+    if (!recordedUri || phase === AudioPhase.Playing) return;
 
     const playVoice = async () => {
       try {
-        setPhase(AudioPhase.Playing);
+        await switchAudioRecording({ enable: false });
+        await delay(200);
+
+        updateAudioState({ phase: AudioPhase.Playing });
 
         player.replace({ uri: recordedUri });
-        const skipMs = useAudioStore.getState().speechStartOffsetMs;
-        if (skipMs != null && skipMs > 0) {
-          await player.seekTo((skipMs - 1000) / 1000);
-        }
-        setSpeechStartOffsetMs(null);
-        player.setPlaybackRate(AUDIO_CONFIG.PITCH_RATE, "medium");
-        player.volume = AUDIO_CONFIG.VOLUME;
+        updateAudioState({ recordedUri: null });
+
+        player.seekTo((speechStartOffsetMs ? speechStartOffsetMs - 500 : 0) / 1000);
+        player.setPlaybackRate(AUDIO_CONFIG.PITCH_RATE, 'medium');
         player.play();
-      } catch {
-        setPhase(AudioPhase.Monitoring);
-        setRecordedUri(null);
-        setSpeechStartOffsetMs(null);
+      } catch (error) {
+        console.error('Playback error:', error);
+        updateAudioState({ phase: AudioPhase.Monitoring });
       }
     };
 
-      playVoice();
-  }, [recordedUri, player, setPhase, setRecordedUri, setSpeechStartOffsetMs]);
+    playVoice();
+  }, [recordedUri, phase]);
 
   useEffect(() => {
-    if (status.didJustFinish) {
-      setPhase(AudioPhase.Monitoring);
-      setRecordedUri(null);
-    }
-  }, [status.didJustFinish, setPhase, setRecordedUri]);
+    const resetToMonitoring = async () => {
+      await delay(200);
+      updateAudioState({ recordedUri: null, phase: AudioPhase.Monitoring });
+    };
 
-  return {
-    isPlaying: status.playing,
-    duration: status.duration,
-  };
+    if (status.didJustFinish) {
+      resetToMonitoring();
+    }
+  }, [phase, status.didJustFinish]);
+
+  return { isPlaying: status.playing };
 };
