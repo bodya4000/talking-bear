@@ -1,5 +1,5 @@
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Alert } from 'react-native';
 
 import { AUDIO_CONFIG } from '../constants';
@@ -7,36 +7,51 @@ import { AudioPhase, useAudioStore } from './use-audio-store';
 import { switchAudioRecording } from './utils';
 
 export const useAudioSpeaker = () => {
-  const { recordedUri, speechStartOffsetMs, phase, updateAudioState } = useAudioStore();
+  const { recordedUri, speechStartOffsetMs, updateAudioState } = useAudioStore();
   const player = useAudioPlayer(null);
   const status = useAudioPlayerStatus(player);
 
+  const resetToMonitoring = useCallback(async () => {
+    switchAudioRecording({ enable: true });
+    updateAudioState({
+      recordedUri: null,
+      speechStartOffsetMs: null,
+      phase: AudioPhase.Monitoring,
+    });
+  }, [updateAudioState]);
+
   useEffect(() => {
-    if (!recordedUri || phase === AudioPhase.Playing) return;
+    if (!recordedUri) return;
 
     const playVoice = async () => {
       try {
         await switchAudioRecording({ enable: false });
 
+        player.replace({ uri: recordedUri });
+        player.setPlaybackRate(AUDIO_CONFIG.PITCH_RATE, 'high');
+
+        const seekTime = Math.max(0, (speechStartOffsetMs ?? 0) / 1000 - 1);
+        player.seekTo(seekTime);
+
         updateAudioState({ phase: AudioPhase.Playing });
 
-        player.replace({ uri: recordedUri });
-        updateAudioState({ recordedUri: null });
-
-        player.seekTo((speechStartOffsetMs ? speechStartOffsetMs - 500 : 0) / 1000);
-        player.setPlaybackRate(AUDIO_CONFIG.PITCH_RATE, 'medium');
         player.play();
       } catch (error) {
-        Alert.alert('Failed to play audio');
+        await resetToMonitoring();
+        Alert.alert('Error', 'Failed to play audio');
       }
     };
 
     playVoice();
-  }, [recordedUri, phase]);
+  }, [recordedUri]);
+
+
+  console.log('useAudioSpeaker: status', status.didJustFinish);
+
 
   useEffect(() => {
     if (status.didJustFinish) {
-      updateAudioState({ recordedUri: null, phase: AudioPhase.Monitoring });
+      resetToMonitoring();
     }
   }, [status.didJustFinish]);
 
