@@ -1,50 +1,65 @@
-# Welcome to your Expo app 👋
+# Talking Bear
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo (React Native) app with a voice-driven flow: listen for speech above a loudness threshold, record a clip, play it back with optional trim from the detected speech start, then return to listening.
 
-## Get started
+## Domain logic: State pattern
 
-1. Install dependencies
+The audio behavior is modeled as explicit **phases** (`AudioPhase` in `src/audio/use-audio-store.ts`). The store holds the current phase plus data the phases need (`recordedUri`, `speechStartOffsetMs`). Hooks (`useAudioPermissions`, `useVoiceRecognition`, `useAudioSpeaker`) react to phase and update it—this is a **state-machine / State-style** design: behavior is chosen by the current phase, not scattered flags.
 
-   ```bash
-   npm install
-   ```
+Phases:
 
-2. Start the app
+| Phase | Meaning |
+|--------|--------|
+| `AskPermissions` | Microphone access is missing or blocked. |
+| `Monitoring` | Always recording in the background; watching input level. |
+| `Recording` | Speech crossed the loudness threshold; capturing the take. |
+| `Playing` | Playback of the last recording; microphone capture is turned off for the session. |
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+### 1. Permissions (`AskPermissions`)
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- **When it runs:** On app load, whenever the app becomes **active** again (e.g. returning from iOS Settings), and the hook resets an internal “settings alert” guard when the app goes to **background** so the next foreground can prompt again if needed.
+- **Default:** Initial phase is **`AskPermissions`** until the OS reports microphone access granted, then the phase moves to **`Monitoring`**.
+- **While `AskPermissions`:** The voice pipeline does not start recording (`useVoiceRecognition` only arms recording when phase is **`Monitoring`**), so **no capture or playback** from the main audio flow until permission is resolved.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+### 2. Monitoring
 
-When you're ready, run:
+- **Behavior:** Start (or keep) **recording** and poll **metering** (input level in decibels).
+- **Rule:** If the level **stays at or below** the configured threshold, stay in **`Monitoring`** and keep listening.
+- **Transition:** If the level **goes above** the threshold, move to **`Recording`** and store **`speechStartOffsetMs`** (position in the current take when speech was detected) so playback can skip silence at the beginning.
+
+---
+
+### 3. Recording
+
+- **Behavior:** Continue reading metering while recording.
+- **While loud enough:** Remain in **`Recording`** (and keep the speech-start offset meaningful for the current segment).
+- **When level drops below the threshold:** **Stop** the recorder, publish **`recordedUri`** to the store, and leave phase as **`Recording`** until the speaker hook picks up the file (the next step is driven by `recordedUri` + phase, not a separate “Saving” phase in the store).
+
+---
+
+### 4. Playing
+
+- **Entering:** When there is a **`recordedUri`** and phase is not already **`Playing`**, the speaker hook turns **off** microphone recording for playback (`switchAudioRecording({ enable: false })`), sets phase to **`Playing`**, loads the file, optionally **seeks** using **`speechStartOffsetMs`**, and plays.
+- **Exiting:** **Only after playback finishes** (`didJustFinish`), the store is reset for that cycle (**`recordedUri`** cleared, phase set back to **`Monitoring`**). Then monitoring-style recording can run again.
+
+---
+
+## Run the project
+
+Install dependencies and start the dev server:
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Use the Expo CLI to open an iOS simulator, Android emulator, or a development build on a device.
 
 ## Learn more
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [Expo documentation](https://docs.expo.dev/)
+- [Expo Router](https://docs.expo.dev/router/introduction/)

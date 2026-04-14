@@ -4,8 +4,7 @@ export enum AudioPhase {
   AskPermissions, // 0
   Monitoring, // 1
   Recording, // 2
-  Saving, // 3
-  Playing, // 4
+  Playing, // 3
 }
 
 interface AudioStore {

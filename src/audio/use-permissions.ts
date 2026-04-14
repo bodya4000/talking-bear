@@ -4,17 +4,17 @@ import { Alert, AppState, Linking } from 'react-native';
 
 import { AudioPhase, useAudioStore } from './use-audio-store';
 
-const showMicSettingsAlert = () => {
-  Alert.alert('Microphone access needed', 'Turn on the microphone for this app in Settings to continue.', [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Open Settings', onPress: Linking.openSettings },
-  ]);
-};
-
 export const useAudioPermissions = () => {
   const { updateAudioState } = useAudioStore();
   const blockedSettingsAlertShownRef = useRef(false);
   const evaluateInFlightRef = useRef(false);
+
+  const showMicSettingsAlert = () => {
+    Alert.alert('Microphone access needed', 'Turn on the microphone for this app in Settings to continue.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Open Settings', onPress: Linking.openSettings },
+    ]);
+  };
 
   useEffect(() => {
     const evaluate = async () => {
